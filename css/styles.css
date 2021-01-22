@@ -20,9 +20,33 @@ body {
 .container {
     /*background-color: white;*/
 }
+
+/* Icon Tabler Styles*/
 svg {
   height: auto;
 }
+
+svg:first-child {
+  stroke: #666;
+  transition: 0.8s;
+}
+
+svg:first-child:hover {
+  stroke: #222;
+  cursor: pointer;
+}
+
+svg.icon-tabler {
+  stroke: rgb(217 83 79 / 80%);
+  transition: 0.8s;
+}
+
+svg.icon-tabler:hover {
+  cursor: pointer;
+  stroke: #c9302c;
+}
+/* Fin */
+
 header {
   margin-top: 3rem;
 }
@@ -33,7 +57,7 @@ header h1 {
   /*border-bottom: 1px solid #e1e1e1;*/
   padding-bottom: 0.3rem;
   /*padding-bottom: 3rem;*/
-  
+
 }
 .lista-citas .cita:last-of-type {
   border-bottom: 0;
