@@ -17,6 +17,11 @@ const ui = new UI();
 const administrarCitas = new Cita();
 
 let editando;
+export let DB;
+
+window.onload = () => {
+	crearDB();
+}
 
 /**
  * Objeto con la informacion de la cita
@@ -29,6 +34,12 @@ const citasobj = {
 	fecha: '',
 	hora: '',
 	sintomas: ''
+}
+
+export function empezarCitaFunc() {
+	
+	// Fija el focus en el input de mascota para empezar a escribir la cita
+	mascotaInput.focus();
 }
 
 
@@ -53,28 +64,72 @@ export function nuevaCita(event) {
 	}
 
 	if ( editando ) {
-		console.log('Modo edicion!');
+		// console.log('Modo edicion!');
 
 		// Pasar el objeto de la cita a edicion
 		administrarCitas.actualizarCita({ ...citasobj });
 
-		// Imprimir alerta
-		ui.imprimirAlerta('Cita actualizada correctamente!');
+		// Edita en IndexDB
+		const transaction = DB.transaction(['citas'], 'readwrite');
+		const objectStore = transaction.objectStore('citas');
+		objectStore.put(citasobj);
 
-		// Cambiar el texto del boton
-		btnSubmit.textContent = 'Crear Cita';
-		btnSubmit.classList.remove('btn-success');
-		btnSubmit.classList.add('btn-primary');
+		transaction.oncomplete = function() {
+			// Imprimir alerta
+			ui.imprimirAlerta('Cita actualizada correctamente!');
 
-		// Quitar modo edicion
-		editando = false;
+			// Cambiar el texto del boton
+			const icon = ` 
+				<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-border-inner" width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+	                <line x1="4" y1="12" x2="20" y2="12" />
+	                <line x1="12" y1="4" x2="12" y2="20" />
+	                <line x1="4" y1="4" x2="4" y2="4.01" />
+	                <line x1="8" y1="4" x2="8" y2="4.01" />
+	                <line x1="16" y1="4" x2="16" y2="4.01" />
+	                <line x1="20" y1="4" x2="20" y2="4.01" />
+	                <line x1="4" y1="8" x2="4" y2="8.01" />
+	                <line x1="20" y1="8" x2="20" y2="8.01" />
+	                <line x1="4" y1="16" x2="4" y2="16.01" />
+	                <line x1="20" y1="16" x2="20" y2="16.01" />
+	                <line x1="4" y1="20" x2="4" y2="20.01" />
+	                <line x1="8" y1="20" x2="8" y2="20.01" />
+	                <line x1="16" y1="20" x2="16" y2="20.01" />
+	                <line x1="20" y1="20" x2="20" y2="20.01" />
+              	</svg>
+              	Crear Cita
+			`
+			btnSubmit.innerHTML = icon;
+			btnSubmit.classList.remove('btn-success');
+			btnSubmit.classList.add('btn-primary');
+
+			// Quitar modo edicion
+			editando = false;
+		}
+
+		transaction.onerror = function() {
+			console.log('Hubo un error al editar la cita');
+		}
+
 	} else {
 		// Crear id para la nueva cita
 		citasobj.id = Date.now();
 		// Le pasamos una copia del objeto por que de lo contrario se duplica la informacion
 		administrarCitas.crearCita({ ...citasobj });
-		// Imprimir alerta
-		ui.imprimirAlerta('Cita agregada correctamente!');
+
+		// Insertar registro en IndexDB
+		const transaction = DB.transaction(['citas'], 'readwrite');
+		// habilitar el objectStore
+		const objectStore = transaction.objectStore('citas');
+		// Insertar en la DB
+		objectStore.add(citasobj);
+
+		transaction.oncomplete = function() {
+
+			// Imprimir alerta
+			console.log('Cita agregada a la DB exitosamente!');
+			ui.imprimirAlerta('Cita agregada correctamente!');
+		};
 	}
 
 
@@ -83,7 +138,7 @@ export function nuevaCita(event) {
 	reiniciarObjeto();
 
 	// Mostrar las citas en el HTML
-	ui.imprimirCitas( administrarCitas );
+	ui.imprimirCitas();
 }
 
 // Reiniciar el objeto
@@ -108,25 +163,34 @@ export function itemCitaAction(event) {
 	const id = this.dataset.id;
 	const isTrash = event.target.className.baseVal.includes('icon-tabler-trash');
 
-	switch ( isTrash ) {
-		case true:
+	if ( isTrash ) {
+		const transaction = DB.transaction(['citas'], 'readwrite');
+		const objectStore = transaction.objectStore('citas');
+		objectStore.delete(parseInt(id));
 
-			// Eliminar cita
-			administrarCitas.eliminarCita(id);
-
+		transaction.oncomplete = function() {
+			console.log(`Cita ${id} eliminana!`);
 			// Mustra un mensaje
 			ui.imprimirAlerta('Cita eliminada correctamente');
-
 			// Refrescar citas
-			ui.imprimirCitas( administrarCitas );
-			break;
-		default:
+			ui.imprimirCitas();
+		}
 
-			// Editar la cita por el id
-			const citas = administrarCitas.obtenerCitas;
-			const cita = citas.find(cita => cita.id.toString() === id);
-			cargarEdicion(cita);
-			break;
+		transaction.onerror = function() {
+			console.log('Hubo un error al eliminar la cita');
+		}
+	} else {
+		const objectStore = DB.transaction('citas').objectStore('citas');
+		objectStore.openCursor().onsuccess = function(event) {
+			const cursor = event.target.result;
+
+			if ( cursor ) {
+				if (cursor.value.id === parseInt(id)) {
+					cargarEdicion(cursor.value);
+				}
+				cursor.continue();
+			} 
+		}
 	}
 
 }
@@ -155,9 +219,60 @@ export function cargarEdicion(cita) {
 	citasobj.id = id;
 
 	// Cambiar el texto del boton
-	btnSubmit.textContent = 'Guardar Cambios';
+	const icon = ` 
+		<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-device-floppy" width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="#ffffff" fill="#fff" stroke-linecap="round" stroke-linejoin="round">
+		  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+		  <path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" />
+		  <circle cx="12" cy="14" r="2" />
+		  <polyline points="14 4 14 8 8 8 8 4" />
+		</svg>
+		Guardar Cambios
+	`;
+	btnSubmit.innerHTML = icon;
 	btnSubmit.classList.remove('btn-primary');
 	btnSubmit.classList.add('btn-success');
 
 	editando = true;
+}
+
+function crearDB() {
+
+	// Crear la base de datos v1
+	const crearDB = window.indexedDB.open('citas', 1);
+	
+	// Si hay un error 
+	crearDB.onerror = () => {
+		console.log('Hubo un error');
+	}
+	
+	// Si todo sale bien
+	crearDB.onsuccess = () => {
+		// console.log('Base de datos creada!');
+		DB = crearDB.result;
+
+		// Mostrar citas al cargar pero indexDB ya esta listo
+		ui.imprimirCitas();
+	}
+
+	// Definir schema
+	crearDB.onupgradeneeded = (event) => {
+
+		const db = event.target.result;
+		const objectStore = db.createObjectStore('citas', {
+			keyPath: 'id',
+			autoIncrement: true
+		});
+
+		// Definir las columnas
+		objectStore.createIndex('mascota', 'mascota', { unique: false });
+		objectStore.createIndex('tipo', 'tipo', { unique: false });
+		objectStore.createIndex('propietario', 'propietario', { unique: false });
+		objectStore.createIndex('telefono', 'telefono', { unique: false });
+		objectStore.createIndex('fecha', 'fecha', { unique: false });
+		objectStore.createIndex('hora', 'hora', { unique: false });
+		objectStore.createIndex('sintomas', 'sintomas', { unique: false });
+		objectStore.createIndex('id', 'id', { unique: true });
+
+		console.log('DB Creada y Lista!');
+	}
 }

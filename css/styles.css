@@ -21,6 +21,10 @@ body {
     /*background-color: white;*/
 }
 
+.jumbotron {
+  display: none;
+}
+
 /* Icon Tabler Styles*/
 svg {
   height: auto;
@@ -36,15 +40,20 @@ svg:first-child:hover {
   cursor: pointer;
 }
 
-svg.icon-tabler {
+svg:nth-child(2) {
   stroke: rgb(217 83 79 / 80%);
   transition: 0.8s;
 }
 
-svg.icon-tabler:hover {
+svg:nth-child(2):hover {
   cursor: pointer;
   stroke: #c9302c;
 }
+
+svg:nth-child(3) {
+  width: 200px;
+}
+
 /* Fin */
 
 header {

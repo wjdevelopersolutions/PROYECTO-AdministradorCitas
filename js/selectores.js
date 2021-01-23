@@ -10,3 +10,6 @@ export const formulario = document.querySelector('#nueva-cita');
 export const contenedorCitas = document.querySelector('#citas');
 
 export const btnSubmit = formulario.querySelector('button[type="submit"]');
+
+export const jumbotron = document.querySelector('.jumbotron');
+export const empezarCita = document.querySelector('#enpezarCita');

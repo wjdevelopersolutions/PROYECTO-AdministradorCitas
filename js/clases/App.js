@@ -1,4 +1,4 @@
-import { datosCita, nuevaCita } from '../funciones.js';
+import { datosCita, nuevaCita, empezarCitaFunc } from '../funciones.js';
 import {
 	mascotaInput,
 	propietarioInput,
@@ -7,7 +7,8 @@ import {
 	fechaInput,
 	horaInput,
 	sintomasInput,
-	formulario
+	formulario,
+  empezarCita
 } from '../selectores.js';
 
 class App {
@@ -27,6 +28,8 @@ class App {
 
     // FORMULARIO PARA NUEVA CITAS
     formulario.addEventListener('submit', nuevaCita);
+
+    empezarCita.addEventListener('click', empezarCitaFunc)
 
   }
 }
